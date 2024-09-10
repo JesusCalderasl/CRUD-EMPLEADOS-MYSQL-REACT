@@ -19,12 +19,12 @@ app.use(express.json());
 
 // Ruta para crear un empleado
 app.post('/create', (req, res) => {
-  const { nombre, edad, pais, cargo, anios } = req.body;
+  const { nombre, dpi, edad, direccion, cargo,  } = req.body;
   
   // Consulta para insertar un nuevo empleado
   db.query(
-    'INSERT INTO empleados (nombre, edad, pais, cargo, anios) VALUES (?, ?, ?, ?, ?)',
-    [nombre, edad, pais, cargo, anios],
+    'INSERT INTO empleados (nombre, dpi, edad, direccion, cargo) VALUES (?, ?, ?, ?, ?)',
+    [nombre, dpi, edad, direccion, cargo],
     (err, result) => {
       if (err) {
         console.log(err);
@@ -37,7 +37,7 @@ app.post('/create', (req, res) => {
 });
 
 
-
+//mostrar empleados
 app.get('/empleados', (req, res) => {
     db.query('SELECT * FROM empleados', (err, result) => {
         if (err) {
@@ -48,6 +48,44 @@ app.get('/empleados', (req, res) => {
         }
     })
 })
+
+//actualizar empleados
+app.put('/update', (req, res) => {
+  const id = req.body.id;
+  const nombre = req.body.nombre;
+  const dpi = req.body.dpi;
+  const edad = req.body.edad;
+  const direccion = req.body.direccion;
+  const cargo = req.body.cargo;
+
+
+  db.query(
+    'UPDATE empleados SET nombre = ?, dpi = ?, edad = ?, direccion = ?, cargo = ? WHERE id = ?',
+    [nombre, dpi, edad, direccion, cargo, id],
+    (err, result) => {
+      if (err) {
+        console.log(err);
+        res.status(500).send('Error al actualizar el empleado');
+      } else {
+        res.send('Empleado actualizado con éxito');
+      }
+    }
+  );
+});
+
+//eliminar empleados
+app.delete('/delete/:id', (req, res) => {
+  const id = req.params.id;
+
+  db.query('DELETE FROM empleados WHERE id = ?', id, (err, result) => {
+    if (err) {
+      console.log(err);
+      res.status(500).send('Error al eliminar el empleado');
+    } else {
+      res.send('Empleado eliminado con éxito');
+    }
+  });
+});
 
 
 
