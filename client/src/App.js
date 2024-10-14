@@ -1,10 +1,18 @@
+// App.js
 import './App.css';
-import { useState } from 'react';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import Login from './login';
+import Register from './register';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import Swal from 'sweetalert2';
+// index.js
+import '@fortawesome/fontawesome-free/css/all.min.css';
+
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [nombre, setNombre] = useState("");
   const [dpi, setDpi] = useState("");
   const [edad, setEdad] = useState("");
@@ -13,11 +21,15 @@ function App() {
   const [id, setId] = useState();
 
   const [editar, setEditar] = useState(false);
-  const [mostrar, setMostrar] = useState(false); // Estado para alternar entre mostrar y ocultar
-
+  const [mostrar, setMostrar] = useState(true); // Estado para mostrar/ocultar la lista de empleados
   const [empleadosList, setEmpleadosList] = useState([]);
 
-  // Validar campos vacíos
+  useEffect(() => {
+    if (isAuthenticated) {
+      getEmpleados();
+    }
+  }, [isAuthenticated]);
+
   const validarCampos = () => {
     if (!nombre || !dpi || !edad || !direccion || !cargo) {
       Swal.fire({
@@ -31,60 +43,28 @@ function App() {
     return true;
   };
 
-  //para agregar empleados
   const add = () => {
-    if (!validarCampos()) {
-      return; // No procede si los campos están vacíos
-    }
-    axios.post('http://localhost:3001/create', {
-      nombre: nombre,
-      edad: edad,
-      direccion: direccion,
-      cargo: cargo,
-      dpi: dpi
-    }).then(() => {
-      getEmpleados();
-      limpiar();
-      Swal.fire({
-        title: "<strong>Registro exitoso</strong>",
-        html: "<i>El empleado <strong>" + nombre + "</strong> fue registrado con éxito.</i>",
-        icon: 'success',
-        timer: 4000
+    if (!validarCampos()) return;
+    axios.post('http://localhost:3001/create', { nombre, edad, direccion, cargo, dpi })
+      .then(() => {
+        getEmpleados();
+        limpiar();
+        Swal.fire('Registro exitoso', `El empleado ${nombre} fue registrado con éxito.`, 'success');
       });
-    });
   };
 
-  //para actualizar empleados
   const update = () => {
-    if (!validarCampos()) {
-      return; // No procede si los campos están vacíos
-    }
-    axios.put('http://localhost:3001/update', {
-      id: id,
-      nombre: nombre,
-      dpi: dpi,
-      edad: edad,
-      direccion: direccion,
-      cargo: cargo
-    }).then(() => {
-      getEmpleados();
-      limpiar();
-      Swal.fire({
-        title: "<strong>Actualización exitosa</strong>",
-        html: "<i>El empleado <strong>" + nombre + "</strong> fue actualizado con éxito.</i>",
-        icon: 'success',
-        timer: 4000
+    if (!validarCampos()) return;
+    axios.put('http://localhost:3001/update', { id, nombre, dpi, edad, direccion, cargo })
+      .then(() => {
+        getEmpleados();
+        limpiar();
+        Swal.fire('Actualización exitosa', `El empleado ${nombre} fue actualizado con éxito.`, 'success');
+      }).catch((error) => {
+        Swal.fire("Error", error.message || 'No se pudo actualizar el empleado', 'error');
       });
-    }).catch((error) => {
-      Swal.fire({
-        title: "Error",
-        icon: "error",
-        text: JSON.parse(JSON.stringify(error)).message === "Network Error" ? "Intenta más tarde" : JSON.parse(JSON.stringify(error)).message
-      });
-    });
   };
 
-  //para editar empleados
   const editarEmpleado = (val) => {
     setEditar(true);
     setNombre(val.nombre);
@@ -92,50 +72,35 @@ function App() {
     setDireccion(val.direccion);
     setCargo(val.cargo);
     setDpi(val.dpi);
-    setId(val.id);
+    setId(val._id);
   };
 
-  //para eliminar empleados
   const eliminarEmpleado = (val) => {
     Swal.fire({
       title: "Confirmar eliminación",
-      html: "<i>¿Desea eliminar a <strong>" + val.nombre + "</strong>?</i>",
+      html: `<i>¿Desea eliminar a <strong>${val.nombre}</strong>?</i>`,
       icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: "#3085d6",
-      cancelButtonColor: "#d33",
       confirmButtonText: "Sí, eliminarlo!"
     }).then((result) => {
       if (result.isConfirmed) {
-        axios.delete(`http://localhost:3001/delete/${val.id}`)
-          .then(() => {
-            getEmpleados();
-            limpiar();
-            Swal.fire({
-              text: val.nombre + ' fue eliminado.',
-              icon: "success",
-              timer: 4000
-            });
-          }).catch((error) => {
-            Swal.fire({
-              title: "Error",
-              icon: "error",
-              text: "No se pudo eliminar el empleado",
-              footer: JSON.parse(JSON.stringify(error)).message === "Network Error" ? "Intenta más tarde" : JSON.parse(JSON.stringify(error)).message
-            });
-          });
+        axios.delete(`http://localhost:3001/delete/${val._id}`).then(() => {
+          getEmpleados();
+          limpiar();
+          Swal.fire(`${val.nombre} fue eliminado.`, '', 'success');
+        }).catch((error) => {
+          Swal.fire("Error", "No se pudo eliminar el empleado", 'error');
+        });
       }
     });
   };
 
-  //para obtener empleados
   const getEmpleados = () => {
     axios.get('http://localhost:3001/empleados').then((response) => {
       setEmpleadosList(response.data);
     });
   };
 
-  //para limpiar los campos
   const limpiar = () => {
     setNombre('');
     setEdad('');
@@ -145,123 +110,114 @@ function App() {
     setEditar(false);
   };
 
-  // Alternar entre mostrar y ocultar empleados
-  const alternarMostrar = () => {
-    if (mostrar) {
-      setMostrar(false); // Ocultar empleados
-    } else {
-      getEmpleados();
-      setMostrar(true); // Mostrar empleados
-    }
+  const toggleMostrar = () => {
+    setMostrar(!mostrar);
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    Swal.fire('Sesión cerrada', 'Has salido de la sesión exitosamente', 'info');
   };
 
   return (
-    <div className="container-fluid">
-      <div className="App"></div>
-
-      <div className="card text-center">
-        <div className="card-header">
-          GESTIÓN DE EMPLEADOS
-        </div>
-        <div className="card-body">
-          {/* Campos de entrada */}
-          <div className="input-group mb-3">
-            <div className="input-group-prepend">
-              <span className="input-group-text" id="basic-addon1">Nombre:</span>
-            </div>
-            <input type="text" onChange={(e) => setNombre(e.target.value)}
-              className="form-control" value={nombre} placeholder="Ingrese nombre" aria-label="Nombre" aria-describedby="basic-addon1" />
-          </div>
-
-          <div className="input-group mb-3">
-            <div className="input-group-prepend">
-              <span className="input-group-text" id="basic-addon5">DPI:</span>
-            </div>
-            <input type="text" onChange={(e) => setDpi(e.target.value)}
-              className="form-control" value={dpi} placeholder="Ingrese DPI" aria-label="dpi" aria-describedby="basic-addon5" maxLength="13" />
-          </div>
-
-          <div className="input-group mb-3">
-            <div className="input-group-prepend">
-              <span className="input-group-text" id="basic-addon2">Edad:</span>
-            </div>
-            <input type="number" onChange={(e) => setEdad(e.target.value)}
-              className="form-control" value={edad} placeholder="Ingrese edad" aria-label="Edad" aria-describedby="basic-addon2" />
-          </div>
-
-          <div className="input-group mb-3">
-            <div className="input-group-prepend">
-              <span className="input-group-text" id="basic-addon3">Dirección:</span>
-            </div>
-            <input type="text" onChange={(e) => setDireccion(e.target.value)}
-              className="form-control" value={direccion} placeholder="Ingrese su Dirección" aria-label="Dirección" aria-describedby="basic-addon3" />
-          </div>
-
-          <div className="input-group mb-3">
-            <div className="input-group-prepend">
-              <span className="input-group-text" id="basic-addon4">Cargo:</span>
-            </div>
-            <input type="text" onChange={(e) => setCargo(e.target.value)}
-              className="form-control" value={cargo} placeholder="Ingrese cargo" aria-label="Cargo" aria-describedby="basic-addon4" />
-          </div>
-        </div>
-
-        <div className="card-footer text-muted">
-          {
-            editar === true ?
-              <div>
-                <button className='btn btn-warning m-2' onClick={update}>Actualizar</button>
-                <button className='btn btn-info m-2' onClick={limpiar}>Cancelar</button>
-              </div>
-              : (
-                <>
-                  <button className='btn btn-success m-2' onClick={add}>Registrar</button>
-                  <button className='btn btn-primary m-2' onClick={alternarMostrar}>
-                    {mostrar ? 'Ocultar' : 'Mostrar'} Empleados
+    <Router>
+      <div style={{ backgroundColor: '#f5f5f5', minHeight: '100vh', padding: '20px' }}>
+        <Routes>
+          <Route path="/" element={<Navigate to="/login" />} />
+          <Route path="/login" element={<Login setIsAuthenticated={setIsAuthenticated} />} />
+          <Route path="/register" element={<Register />} />
+          <Route 
+            path="/empleados" 
+            element={isAuthenticated ? 
+              <div className="container my-5">
+                <div className="d-flex justify-content-between align-items-center mb-4">
+                  <h1 className="text-center">Gestión de Empleados</h1>
+                  <button onClick={handleLogout} className="btn btn-danger btn-sm">
+                    <i className="fas fa-sign-out-alt"></i>
                   </button>
-                </>
-              )
-          }
-        </div>
-      </div>
-
-      {mostrar && (
-        <table className="table table-striped">
-          <thead>
-            <tr>
-              <th scope="col">#</th>
-              <th scope="col">Nombre</th>
-              <th scope="col">DPI</th>
-              <th scope="col">Edad</th>
-              <th scope="col">Dirección</th>
-              <th scope="col">Cargo</th>
-              <th scope="col">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {
-              empleadosList.map((val, key) => {
-                return (
-                  <tr key={val.id}>
-                    <th>{val.id}</th>
-                    <td>{val.nombre}</td>
-                    <td>{val.dpi}</td>
-                    <td>{val.edad}</td>
-                    <td>{val.direccion}</td>
-                    <td>{val.cargo}</td>
-
-                    <div className="btn-group" role="group" aria-label="Basic example">
-                      <button type="button" onClick={() => editarEmpleado(val)} className="btn btn-info">Editar</button>
-                      <button type="button" onClick={() => eliminarEmpleado(val)} className="btn btn-danger">Eliminar</button>
+                </div>
+                
+                {/* Formulario de empleado */}
+                <div className="card p-4 mb-4 shadow-sm">
+                  <h5 className="mb-3">{editar ? "Editar Empleado" : "Agregar Nuevo Empleado"}</h5>
+                  <div className="row">
+                    <div className="col-md-6 mb-2">
+                      <input type="text" placeholder="Nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} className="form-control form-control-sm" />
                     </div>
-                  </tr>
-                );
-              })
-            }
-          </tbody>
-        </table>
-      )}
-    </div>
+                    <div className="col-md-6 mb-2">
+                      <input 
+                        type="text" 
+                        placeholder="DPI" 
+                        value={dpi} 
+                        onChange={(e) => setDpi(e.target.value.replace(/\D/g, '').slice(0, 13))} 
+                        className="form-control form-control-sm" 
+                      />
+                    </div>
+                    <div className="col-md-4 mb-2">
+                      <input type="number" placeholder="Edad" value={edad} onChange={(e) => setEdad(e.target.value)} className="form-control form-control-sm" />
+                    </div>
+                    <div className="col-md-4 mb-2">
+                      <input type="text" placeholder="Dirección" value={direccion} onChange={(e) => setDireccion(e.target.value)} className="form-control form-control-sm" />
+                    </div>
+                    <div className="col-md-4 mb-2">
+                      <input type="text" placeholder="Cargo" value={cargo} onChange={(e) => setCargo(e.target.value)} className="form-control form-control-sm" />
+                    </div>
+                  </div>
+                  <div className="d-flex justify-content-end">
+                    <button onClick={editar ? update : add} className={`btn btn-sm ${editar ? 'btn-warning' : 'btn-success'} me-2`}>
+                      <i className={`fas ${editar ? 'fa-edit' : 'fa-plus'}`}></i> {editar ? 'Actualizar' : 'Agregar'}
+                    </button>
+                    <button onClick={limpiar} className="btn btn-sm btn-secondary">
+                      <i className="fas fa-eraser"></i> Limpiar
+                    </button>
+                  </div>
+                </div>
+
+                {/* Botón para mostrar/ocultar empleados */}
+                <button onClick={toggleMostrar} className="btn btn-info btn-sm mb-3">
+                  <i className={`fas ${mostrar ? 'fa-eye-slash' : 'fa-eye'}`}></i> {mostrar ? "Ocultar Lista de Empleados" : "Mostrar Lista de Empleados"}
+                </button>
+
+                {/* Tabla de empleados */}
+                {mostrar && (
+                  <table className="table table-striped table-bordered shadow-sm">
+                    <thead className="table-dark">
+                      <tr>
+                        <th>Nombre</th>
+                        <th>DPI</th>
+                        <th>Edad</th>
+                        <th>Dirección</th>
+                        <th>Cargo</th>
+                        <th>Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {empleadosList.map((empleado) => (
+                        <tr key={empleado._id}>
+                          <td>{empleado.nombre}</td>
+                          <td>{empleado.dpi}</td>
+                          <td>{empleado.edad}</td>
+                          <td>{empleado.direccion}</td>
+                          <td>{empleado.cargo}</td>
+                          <td>
+                            <button className="btn btn-outline-warning btn-sm me-2" onClick={() => editarEmpleado(empleado)}>
+                              <i className="fas fa-edit"></i>
+                            </button>
+                            <button className="btn btn-outline-danger btn-sm" onClick={() => eliminarEmpleado(empleado)}>
+                              <i className="fas fa-trash-alt"></i>
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div> 
+              : <Navigate to="/login" />} 
+          />
+        </Routes>
+      </div>
+    </Router>
   );
 }
 
