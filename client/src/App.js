@@ -1,4 +1,3 @@
-// App.js
 import './App.css';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import Login from './login';
@@ -7,9 +6,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import Swal from 'sweetalert2';
-// index.js
 import '@fortawesome/fontawesome-free/css/all.min.css';
-
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -142,7 +139,13 @@ function App() {
                   <h5 className="mb-3">{editar ? "Editar Empleado" : "Agregar Nuevo Empleado"}</h5>
                   <div className="row">
                     <div className="col-md-6 mb-2">
-                      <input type="text" placeholder="Nombre" value={nombre} onChange={(e) => setNombre(e.target.value)} className="form-control form-control-sm" />
+                      <input 
+                        type="text" 
+                        placeholder="Nombre" 
+                        value={nombre} 
+                        onChange={(e) => setNombre(e.target.value.replace(/[^a-zA-Z\s]/g, ''))} 
+                        className="form-control form-control-sm" 
+                      />
                     </div>
                     <div className="col-md-6 mb-2">
                       <input 
@@ -154,7 +157,13 @@ function App() {
                       />
                     </div>
                     <div className="col-md-4 mb-2">
-                      <input type="number" placeholder="Edad" value={edad} onChange={(e) => setEdad(e.target.value)} className="form-control form-control-sm" />
+                      <input 
+                        type="number" 
+                        placeholder="Edad" 
+                        value={edad} 
+                        onChange={(e) => setEdad(e.target.value.replace(/\D/g, '').slice(0, 2))} 
+                        className="form-control form-control-sm" 
+                      />
                     </div>
                     <div className="col-md-4 mb-2">
                       <input type="text" placeholder="Dirección" value={direccion} onChange={(e) => setDireccion(e.target.value)} className="form-control form-control-sm" />
